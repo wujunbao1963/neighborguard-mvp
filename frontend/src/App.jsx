@@ -26,20 +26,29 @@ function App() {
   // Auto-select circle - prioritize circles where user is OWNER or HOUSEHOLD
   useEffect(() => {
     if (!isAuthenticated) return; // Don't try to load circles if not logged in
+    if (circles.length === 0) return;
     
-    if (circles.length > 0 && !currentCircleId) {
-      // Find circle where user is OWNER or HOUSEHOLD (their own home), otherwise use first
-      const homeCircle = circles.find(c => c.role === 'OWNER' || c.role === 'HOUSEHOLD');
+    // Always prioritize user's home circle (where they are OWNER or HOUSEHOLD)
+    const homeCircle = circles.find(c => c.role === 'OWNER' || c.role === 'HOUSEHOLD');
+    
+    if (!currentCircleId) {
+      // No saved circle, select home or first
       const defaultCircle = homeCircle || circles[0];
       selectCircle(defaultCircle.id);
-    } else if (currentCircleId && !currentCircle && !circleLoading) {
-      // Verify the saved circleId is still valid for this user
+    } else if (!currentCircle && !circleLoading) {
+      // Have saved circleId but no loaded circle yet
       const validCircle = circles.find(c => c.id === currentCircleId);
+      
       if (validCircle) {
-        selectCircle(currentCircleId);
-      } else if (circles.length > 0) {
-        // Saved circle not valid, find home circle or use first available
-        const homeCircle = circles.find(c => c.role === 'OWNER' || c.role === 'HOUSEHOLD');
+        // Saved circle is valid for this user
+        // But if user has a home circle and saved circle is not their home, switch to home
+        if (homeCircle && currentCircleId !== homeCircle.id) {
+          selectCircle(homeCircle.id);
+        } else {
+          selectCircle(currentCircleId);
+        }
+      } else {
+        // Saved circle not valid for this user, select home or first
         const defaultCircle = homeCircle || circles[0];
         selectCircle(defaultCircle.id);
       }
