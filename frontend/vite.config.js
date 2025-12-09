@@ -18,8 +18,9 @@ export default defineConfig({
   },
   preview: {
     host: '0.0.0.0',
-    port: process.env.PORT || 4173,
-    proxy: {
+    port: parseInt(process.env.PORT) || 4173,
+    strictPort: true,
+    allowedHosts: ['neighborguard-frontend-production.up.railway.app', '.railway.app'],    proxy: {
       '/api': {
         target: process.env.VITE_API_URL || 'http://localhost:3001',
         changeOrigin: true
