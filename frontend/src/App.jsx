@@ -23,20 +23,24 @@ function App() {
     await logout();
   };
 
-  // Auto-select first circle - ONLY when authenticated
+  // Auto-select circle - prioritize circles where user is OWNER
   useEffect(() => {
-    if (!isAuthenticated) return; // Don't try to load circles if not logged in
+    if (!isAuthenticated || circles.length === 0) return;
     
-    if (circles.length > 0 && !currentCircleId) {
-      selectCircle(circles[0].id);
-    } else if (currentCircleId && !currentCircle && !circleLoading) {
-      // Verify the saved circleId is still valid for this user
+    // Find circle where user is OWNER
+    const ownerCircle = circles.find(c => c.role === 'OWNER');
+    const defaultCircle = ownerCircle || circles[0];
+    
+    // If no circle selected, or current selection is invalid, select default
+    if (!currentCircleId) {
+      selectCircle(defaultCircle.id);
+    } else if (!currentCircle && !circleLoading) {
       const validCircle = circles.find(c => c.id === currentCircleId);
-      if (validCircle) {
+      if (!validCircle) {
+        // Current circle invalid, select default (prefer OWNER)
+        selectCircle(defaultCircle.id);
+      } else {
         selectCircle(currentCircleId);
-      } else if (circles.length > 0) {
-        // Saved circle not valid, use first available
-        selectCircle(circles[0].id);
       }
     }
   }, [isAuthenticated, circles, currentCircleId, currentCircle, circleLoading, selectCircle]);

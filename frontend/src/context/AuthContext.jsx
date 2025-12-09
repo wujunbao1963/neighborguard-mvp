@@ -52,6 +52,15 @@ export function AuthProvider({ children }) {
       localStorage.setItem('accessToken', tokens.accessToken);
       localStorage.setItem('refreshToken', tokens.refreshToken);
       
+      // Auto-select OWNER circle, or first circle if not owner of any
+      const ownerCircle = circles.find(c => c.role === 'OWNER');
+      const defaultCircle = ownerCircle || circles[0];
+      if (defaultCircle) {
+        localStorage.setItem('currentCircleId', defaultCircle.id);
+      } else {
+        localStorage.removeItem('currentCircleId');
+      }
+      
       setUser(user);
       setCircles(circles);
       

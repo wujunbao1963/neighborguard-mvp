@@ -52,7 +52,8 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(email, code);
-      // App.jsx will automatically show main view when isAuthenticated becomes true
+      // Reload page to reinitialize CircleContext with correct circleId
+      window.location.reload();
     } catch (err) {
       setError(err.message);
     } finally {
