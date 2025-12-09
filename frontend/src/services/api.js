@@ -142,7 +142,18 @@ export const uploadAPI = {
     });
   },
   getAll: (circleId, eventId) => api.get(`/uploads/${circleId}/${eventId}`),
-  delete: (circleId, mediaId) => api.delete(`/uploads/${circleId}/${mediaId}`)
+  delete: (circleId, mediaId) => api.delete(`/uploads/${circleId}/${mediaId}`),
+  
+  // Download all media as zip
+  downloadAll: (circleId, startDate, endDate) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    
+    // Return URL for direct download
+    const token = localStorage.getItem('accessToken');
+    return `${API_BASE}/uploads/${circleId}/download-all?${params.toString()}&token=${token}`;
+  }
 };
 
 export default api;

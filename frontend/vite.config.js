@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3000,
+    port: 5173,
     proxy: {
       '/api': {
         target: process.env.VITE_API_URL || 'http://localhost:3001',
@@ -20,7 +20,8 @@ export default defineConfig({
     host: '0.0.0.0',
     port: parseInt(process.env.PORT) || 4173,
     strictPort: true,
-    allowedHosts: ['neighborguard-frontend-production.up.railway.app', '.railway.app'],    proxy: {
+    allowedHosts: ['.railway.app'],
+    proxy: {
       '/api': {
         target: process.env.VITE_API_URL || 'http://localhost:3001',
         changeOrigin: true
@@ -33,4 +34,3 @@ export default defineConfig({
   }
 });
 
-// Railway deployment - Force rebuild timestamp: 2024-12-09-15:50:00

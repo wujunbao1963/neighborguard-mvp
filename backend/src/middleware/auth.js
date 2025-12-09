@@ -14,13 +14,20 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
 // ============================================================================
 const authenticate = async (req, res, next) => {
   try {
+    // Support token from header or query parameter (for downloads)
+    let token;
     const authHeader = req.headers.authorization;
     
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    } else if (req.query.token) {
+      // Allow token in query for file downloads
+      token = req.query.token;
+    }
+    
+    if (!token) {
       throw new AppError('未提供认证令牌', 401, 'NO_TOKEN');
     }
-
-    const token = authHeader.split(' ')[1];
     
     let decoded;
     try {

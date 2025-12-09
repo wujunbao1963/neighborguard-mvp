@@ -23,24 +23,25 @@ function App() {
     await logout();
   };
 
-  // Auto-select circle - prioritize circles where user is OWNER
+  // Auto-select circle - prioritize circles where user is OWNER or HOUSEHOLD
   useEffect(() => {
-    if (!isAuthenticated || circles.length === 0) return;
+    if (!isAuthenticated) return; // Don't try to load circles if not logged in
     
-    // Find circle where user is OWNER
-    const ownerCircle = circles.find(c => c.role === 'OWNER');
-    const defaultCircle = ownerCircle || circles[0];
-    
-    // If no circle selected, or current selection is invalid, select default
-    if (!currentCircleId) {
+    if (circles.length > 0 && !currentCircleId) {
+      // Find circle where user is OWNER or HOUSEHOLD (their own home), otherwise use first
+      const homeCircle = circles.find(c => c.role === 'OWNER' || c.role === 'HOUSEHOLD');
+      const defaultCircle = homeCircle || circles[0];
       selectCircle(defaultCircle.id);
-    } else if (!currentCircle && !circleLoading) {
+    } else if (currentCircleId && !currentCircle && !circleLoading) {
+      // Verify the saved circleId is still valid for this user
       const validCircle = circles.find(c => c.id === currentCircleId);
-      if (!validCircle) {
-        // Current circle invalid, select default (prefer OWNER)
-        selectCircle(defaultCircle.id);
-      } else {
+      if (validCircle) {
         selectCircle(currentCircleId);
+      } else if (circles.length > 0) {
+        // Saved circle not valid, find home circle or use first available
+        const homeCircle = circles.find(c => c.role === 'OWNER' || c.role === 'HOUSEHOLD');
+        const defaultCircle = homeCircle || circles[0];
+        selectCircle(defaultCircle.id);
       }
     }
   }, [isAuthenticated, circles, currentCircleId, currentCircle, circleLoading, selectCircle]);

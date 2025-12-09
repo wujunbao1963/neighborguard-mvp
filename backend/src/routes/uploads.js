@@ -271,4 +271,84 @@ router.delete('/:circleId/:mediaId', authenticate, requireCircleMember(), async 
   }
 });
 
+// ============================================================================
+// GET /api/uploads/:circleId/download-all - Download all media as zip
+// ============================================================================
+const archiver = require('archiver');
+
+router.get('/:circleId/download-all', authenticate, requireCircleMember(), async (req, res, next) => {
+  try {
+    const { circleId } = req.params;
+    const { startDate, endDate } = req.query;
+
+    // Build date filter
+    const dateFilter = {};
+    if (startDate) {
+      dateFilter.gte = new Date(startDate);
+    }
+    if (endDate) {
+      dateFilter.lte = new Date(endDate);
+    }
+
+    // Get all events with media in this circle
+    const events = await prisma.event.findMany({
+      where: {
+        circleId,
+        deletedAt: null,
+        ...(Object.keys(dateFilter).length > 0 ? { occurredAt: dateFilter } : {})
+      },
+      include: {
+        media: true,
+        zone: { select: { displayName: true } }
+      },
+      orderBy: { occurredAt: 'desc' }
+    });
+
+    // Collect all media files
+    const mediaFiles = [];
+    for (const event of events) {
+      for (const media of event.media) {
+        const filePath = path.join(__dirname, '../../', media.fileUrl);
+        if (fs.existsSync(filePath)) {
+          const dateStr = new Date(event.occurredAt).toISOString().split('T')[0];
+          const zoneName = event.zone?.displayName || 'unknown';
+          const ext = path.extname(media.fileName);
+          const fileName = `${dateStr}_${zoneName}_${event.title.substring(0, 20)}_${media.id.substring(0, 8)}${ext}`;
+          mediaFiles.push({
+            filePath,
+            fileName: fileName.replace(/[\/\\:*?"<>|]/g, '_') // Sanitize filename
+          });
+        }
+      }
+    }
+
+    if (mediaFiles.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { message: '没有找到任何媒体文件', code: 'NO_MEDIA' }
+      });
+    }
+
+    // Set headers for zip download
+    const zipFileName = `neighborguard_media_${new Date().toISOString().split('T')[0]}.zip`;
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${zipFileName}"`);
+
+    // Create zip archive
+    const archive = archiver('zip', { zlib: { level: 5 } });
+    archive.pipe(res);
+
+    // Add files to archive
+    for (const { filePath, fileName } of mediaFiles) {
+      archive.file(filePath, { name: fileName });
+    }
+
+    // Finalize archive
+    await archive.finalize();
+
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

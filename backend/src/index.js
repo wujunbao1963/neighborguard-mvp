@@ -25,8 +25,30 @@ const PORT = process.env.PORT || 3001;
 // ============================================================================
 // Middleware
 // ============================================================================
+
+// CORS - Support both local development and Railway deployment
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.some(allowed => origin.startsWith(allowed.replace(/\/$/, '')))) {
+      return callback(null, true);
+    }
+    
+    // Also allow any railway.app subdomain
+    if (origin.includes('.railway.app') || origin.includes('.up.railway.app')) {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 
@@ -44,7 +66,8 @@ app.get('/health', (req, res) => {
     status: 'ok', 
     phase: 4,
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
+    env: process.env.NODE_ENV || 'development'
   });
 });
 

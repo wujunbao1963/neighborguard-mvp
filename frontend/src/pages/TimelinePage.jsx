@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCircle } from '../context/CircleContext';
-import { eventAPI } from '../services/api';
+import { eventAPI, uploadAPI } from '../services/api';
 import EventCard from '../components/EventCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 
@@ -50,6 +50,18 @@ export default function TimelinePage({ onViewEvent }) {
     return zone?.displayName || '未知区域';
   };
 
+  // Download all media
+  const handleDownloadAll = () => {
+    if (!currentCircleId) {
+      alert('请先选择一个圈子');
+      return;
+    }
+    
+    // Get the download URL and open it
+    const downloadUrl = uploadAPI.downloadAll(currentCircleId);
+    window.open(downloadUrl, '_blank');
+  };
+
   // Filter events
   const filteredEvents = events.filter(event => {
     // Filter by severity
@@ -87,6 +99,9 @@ export default function TimelinePage({ onViewEvent }) {
     return new Date(b.createdAt) - new Date(a.createdAt);
   });
 
+  // Count total media
+  const totalMedia = events.reduce((sum, e) => sum + (e.mediaCount || 0), 0);
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
@@ -98,14 +113,27 @@ export default function TimelinePage({ onViewEvent }) {
   return (
     <div>
       <div style={{ marginBottom: '20px' }}>
-        <h2 style={{ marginBottom: '16px' }}>
-          事件时间线
-          {circles.length > 1 && (
-            <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666', marginLeft: '8px' }}>
-              (所有圈子)
-            </span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h2 style={{ margin: 0 }}>
+            事件时间线
+            {circles.length > 1 && (
+              <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666', marginLeft: '8px' }}>
+                (所有圈子)
+              </span>
+            )}
+          </h2>
+          
+          {/* Download All Button */}
+          {totalMedia > 0 && (
+            <button 
+              className="btn btn-secondary"
+              onClick={handleDownloadAll}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', fontSize: '14px' }}
+            >
+              📦 下载所有附件 ({totalMedia})
+            </button>
           )}
-        </h2>
+        </div>
         
         {/* Search Box */}
         <div style={{ marginBottom: '12px' }}>
