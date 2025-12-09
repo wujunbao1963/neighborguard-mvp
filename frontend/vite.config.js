@@ -31,3 +31,5 @@ export default defineConfig({
     }
   }
 });
+
+// Railway deployment - Force rebuild timestamp: 2024-12-09-15:50:00
