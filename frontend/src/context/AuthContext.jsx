@@ -51,6 +51,8 @@ export function AuthProvider({ children }) {
       
       localStorage.setItem('accessToken', tokens.accessToken);
       localStorage.setItem('refreshToken', tokens.refreshToken);
+      // Clear old circle selection so new user gets their home circle
+      localStorage.removeItem('currentCircleId');
       
       setUser(user);
       setCircles(circles);

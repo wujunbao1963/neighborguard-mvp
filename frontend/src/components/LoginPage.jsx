@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useCircle } from '../context/CircleContext';
 import { isValidEmail } from '../utils/helpers';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -12,6 +13,7 @@ export default function LoginPage() {
   const [countdown, setCountdown] = useState(0);
   
   const { requestCode, login } = useAuth();
+  const { resetCircle } = useCircle();
 
   const handleRequestCode = async (e) => {
     e.preventDefault();
@@ -51,6 +53,8 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
+      // Reset circle state before login to clear previous user's selection
+      resetCircle();
       await login(email, code);
       // App.jsx will automatically show main view when isAuthenticated becomes true
     } catch (err) {
