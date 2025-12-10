@@ -22,6 +22,9 @@ model User {
   avatarUrl     String?   @map("avatar_url")
   phone         String?
   
+  // Admin role: SUPER_ADMIN cannot be deleted, ADMIN can manage whitelist
+  adminRole     AdminRole? @map("admin_role")
+  
   isActive      Boolean   @default(true) @map("is_active")
   emailVerified Boolean   @default(false) @map("email_verified")
   lastLoginAt   DateTime? @map("last_login_at")
@@ -36,6 +39,11 @@ model User {
   refreshTokens     RefreshToken[]
   
   @@map("users")
+}
+
+enum AdminRole {
+  SUPER_ADMIN  // 超级管理员，不可删除
+  ADMIN        // 普通管理员，可管理白名单
 }
 
 // ============================================================================

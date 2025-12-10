@@ -8,6 +8,7 @@ const router = express.Router();
 const prisma = require('../config/database');
 const { AppError } = require('../middleware/errorHandler');
 const { authenticate, requireCircleMember, requireCanManageHome } = require('../middleware/auth');
+const { ZONE_TYPES, getZoneTypesForHouseType } = require('../config/constants');
 
 // ============================================================================
 // GET /api/zones/:circleId - Get all zones for a circle
@@ -294,13 +295,8 @@ router.post('/:circleId/reset-defaults', authenticate, requireCanManageHome, asy
       throw new AppError('房屋信息不存在', 404, 'HOME_NOT_FOUND');
     }
 
-    // Get zone configs
-    const zoneConfigs = await prisma.zoneTypeConfig.findMany({
-      where: {
-        supportedHouseTypes: { has: home.houseType }
-      }
-    });
-
+    // Get zone configs (from code-based config)
+    const zoneConfigs = getZoneTypesForHouseType(home.houseType);
     const configMap = new Map(zoneConfigs.map(c => [c.value, c]));
 
     // Reset each zone to defaults
@@ -334,6 +330,70 @@ router.post('/:circleId/reset-defaults', authenticate, requireCanManageHome, asy
       success: true,
       zones: updatedZones,
       message: '防区设置已重置为默认值'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ============================================================================
+// POST /api/zones/:circleId/init - Initialize zones for a circle (if empty)
+// ============================================================================
+router.post('/:circleId/init', authenticate, requireCircleMember({ roles: ['OWNER', 'HOUSEHOLD'] }), async (req, res, next) => {
+  try {
+    const { circleId } = req.params;
+
+    // Check if zones already exist
+    const existingZones = await prisma.zone.count({
+      where: { circleId }
+    });
+
+    if (existingZones > 0) {
+      return res.json({
+        success: true,
+        message: '防区已存在，无需初始化',
+        zonesCount: existingZones
+      });
+    }
+
+    // Get home to determine house type
+    const home = await prisma.home.findUnique({
+      where: { circleId }
+    });
+
+    const houseType = home?.houseType || 'DETACHED';
+    const zoneConfigs = getZoneTypesForHouseType(houseType);
+
+    console.log(`📍 Initializing ${zoneConfigs.length} zones for circle ${circleId} (${houseType})`);
+
+    // Create zones
+    for (const config of zoneConfigs) {
+      await prisma.zone.create({
+        data: {
+          circleId,
+          zoneType: config.value,
+          displayName: config.label,
+          zoneGroup: config.zoneGroup,
+          icon: config.icon,
+          description: config.description,
+          isEnabled: config.defaultEnabled,
+          displayOrder: config.displayOrder,
+          isPublicFacing: config.isPublicFacing,
+          isHighValueArea: config.isHighValueArea
+        }
+      });
+    }
+
+    // Fetch created zones
+    const zones = await prisma.zone.findMany({
+      where: { circleId },
+      orderBy: { displayOrder: 'asc' }
+    });
+
+    res.json({
+      success: true,
+      message: `已创建 ${zones.length} 个防区`,
+      zones
     });
   } catch (error) {
     next(error);

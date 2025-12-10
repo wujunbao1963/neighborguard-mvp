@@ -1,11 +1,11 @@
 // ============================================================================
 // Config Routes - Zone Types and Event Types
-// Phase 1: Public configuration endpoints
+// Now using code-based configuration (no database dependency)
 // ============================================================================
 
 const express = require('express');
 const router = express.Router();
-const prisma = require('../config/database');
+const { ZONE_TYPES, EVENT_TYPES, HOUSE_TYPES, MEMBER_ROLES } = require('../config/constants');
 
 // ============================================================================
 // GET /api/config/zones - Get all zone type configurations
@@ -14,9 +14,7 @@ router.get('/zones', async (req, res, next) => {
   try {
     const { houseType } = req.query;
 
-    let zoneTypes = await prisma.zoneTypeConfig.findMany({
-      orderBy: { displayOrder: 'asc' }
-    });
+    let zoneTypes = [...ZONE_TYPES];
 
     // Filter by house type if provided
     if (houseType) {
@@ -24,6 +22,9 @@ router.get('/zones', async (req, res, next) => {
         z.supportedHouseTypes.includes(houseType.toUpperCase())
       );
     }
+
+    // Sort by display order
+    zoneTypes.sort((a, b) => a.displayOrder - b.displayOrder);
 
     // Group by zone group
     const grouped = zoneTypes.reduce((acc, zone) => {
@@ -56,13 +57,9 @@ router.get('/zones', async (req, res, next) => {
 // ============================================================================
 router.get('/event-types', async (req, res, next) => {
   try {
-    const eventTypes = await prisma.eventTypeConfig.findMany({
-      orderBy: { displayOrder: 'asc' }
-    });
-
     res.json({
       success: true,
-      eventTypes: eventTypes.map(et => ({
+      eventTypes: EVENT_TYPES.map(et => ({
         value: et.value,
         label: et.label,
         labelEn: et.labelEn,
@@ -83,9 +80,7 @@ router.get('/event-types', async (req, res, next) => {
 // ============================================================================
 router.get('/event-zone-whitelist', async (req, res, next) => {
   try {
-    const eventTypes = await prisma.eventTypeConfig.findMany();
-
-    const whitelist = eventTypes.reduce((acc, et) => {
+    const whitelist = EVENT_TYPES.reduce((acc, et) => {
       acc[et.value] = et.allowedZones;
       return acc;
     }, {});
@@ -106,12 +101,7 @@ router.get('/house-types', async (req, res, next) => {
   try {
     res.json({
       success: true,
-      houseTypes: [
-        { value: 'DETACHED', label: '独立屋', labelEn: 'Detached House' },
-        { value: 'SEMI', label: '半独立屋', labelEn: 'Semi-detached' },
-        { value: 'ROW', label: '联排屋', labelEn: 'Townhouse' },
-        { value: 'APARTMENT', label: '公寓', labelEn: 'Apartment' }
-      ]
+      houseTypes: HOUSE_TYPES
     });
   } catch (error) {
     next(error);
@@ -165,13 +155,13 @@ router.get('/roles', async (req, res, next) => {
   try {
     res.json({
       success: true,
-      roles: [
-        { value: 'OWNER', label: '屋主', labelEn: 'Owner', description: '房屋拥有者，可管理所有设置和成员' },
-        { value: 'HOUSEHOLD', label: '同住人', labelEn: 'Household', description: '与屋主同住的家人' },
-        { value: 'NEIGHBOR', label: '邻居', labelEn: 'Neighbor', description: '住在附近的邻居' },
-        { value: 'RELATIVE', label: '亲属', labelEn: 'Relative', description: '不住一起的亲属' },
-        { value: 'OBSERVER', label: '观察者', labelEn: 'Observer', description: '围观但不负责的人' }
-      ]
+      roles: MEMBER_ROLES.map(r => ({
+        value: r.value,
+        label: r.label,
+        labelEn: r.labelEn,
+        canEdit: r.canEdit,
+        canInvite: r.canInvite
+      }))
     });
   } catch (error) {
     next(error);

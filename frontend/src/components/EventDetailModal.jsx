@@ -241,36 +241,36 @@ export default function EventDetailModal({ eventId, circleId, onClose }) {
                 )}
               </div>
 
-              {/* Media */}
+              {/* Media summary - download button only shows when event is resolved */}
               {event.media?.length > 0 && (
-                <div style={{ marginBottom: '20px' }}>
-                  <h4 style={{ marginBottom: '12px' }}>📎 附件证据 ({event.media.length})</h4>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {event.media.map(m => (
-                      <a key={m.id} href={m.fileUrl} target="_blank" rel="noopener noreferrer"
-                        style={{ 
-                          width: '100px', height: '100px', borderRadius: '8px', overflow: 'hidden', 
-                          background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          textDecoration: 'none', position: 'relative'
-                        }}>
-                        {m.mediaType === 'PHOTO' ? (
-                          <img src={m.thumbnailUrl || m.fileUrl} alt="" 
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                            onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.innerHTML = '🖼️'; }}
-                          />
-                        ) : (
-                          <div style={{ 
-                            width: '100%', height: '100%', 
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white'
-                          }}>
-                            <span style={{ fontSize: '32px' }}>▶️</span>
-                            <span style={{ fontSize: '10px', marginTop: '4px' }}>视频</span>
-                          </div>
-                        )}
-                      </a>
-                    ))}
-                  </div>
+                <div style={{ 
+                  marginBottom: '16px', 
+                  padding: '12px 16px', 
+                  background: '#f0f9ff', 
+                  borderRadius: '8px', 
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <span style={{ fontSize: '14px', color: '#0369a1' }}>
+                    📎 此事件包含 {event.media.length} 个附件（见下方时间线）
+                  </span>
+                  {!isOpen && (
+                    <a 
+                      href={uploadAPI.downloadEvent(effectiveCircleId, eventId)}
+                      download
+                      style={{
+                        padding: '6px 12px',
+                        background: '#667eea',
+                        color: 'white',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        textDecoration: 'none'
+                      }}
+                    >
+                      📥 下载报告
+                    </a>
+                  )}
                 </div>
               )}
 
@@ -394,16 +394,71 @@ export default function EventDetailModal({ eventId, circleId, onClose }) {
                 <h4 style={{ marginBottom: '12px' }}>事件时间线 ({event.notes?.length || 0})</h4>
                 {event.notes?.length > 0 ? (
                   <div style={{ paddingLeft: '8px' }}>
-                    {event.notes.map(note => (
-                      <div key={note.id} className="timeline-item">
-                        <div className="timeline-time">{new Date(note.createdAt).toLocaleString('zh-CN')}</div>
-                        <div className="timeline-content">
-                          <strong>{note.author?.displayName || '系统'}</strong>
-                          {note.noteType === 'REACTION' && <span style={{ marginLeft: '8px', color: '#667eea' }}>[反馈]</span>}
-                          ：{note.body}
+                    {event.notes.map(note => {
+                      // Check if this note is about media upload
+                      const isMediaNote = note.body?.includes('上传了') && 
+                        (note.body?.includes('图片') || note.body?.includes('视频'));
+                      
+                      // Find media uploaded by same user around this time (within 10 seconds)
+                      const noteTime = new Date(note.createdAt).getTime();
+                      const noteAuthorId = note.author?.id || note.authorId;
+                      const relatedMedia = isMediaNote ? (event.media || []).filter(m => {
+                        const mediaTime = new Date(m.createdAt).getTime();
+                        const mediaUploaderId = m.uploader?.id || m.uploaderId;
+                        // Match by uploader and time proximity
+                        const sameUploader = mediaUploaderId === noteAuthorId;
+                        const closeTime = Math.abs(mediaTime - noteTime) < 10000; // within 10 seconds
+                        return sameUploader && closeTime;
+                      }) : [];
+
+                      return (
+                        <div key={note.id} className="timeline-item">
+                          <div className="timeline-time">{new Date(note.createdAt).toLocaleString('zh-CN')}</div>
+                          <div className="timeline-content">
+                            <strong>{note.author?.displayName || '系统'}</strong>
+                            {note.noteType === 'REACTION' && <span style={{ marginLeft: '8px', color: '#667eea' }}>[反馈]</span>}
+                            ：{note.body}
+                            
+                            {/* Show media thumbnails/links inline */}
+                            {relatedMedia.length > 0 && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                                {relatedMedia.map(m => (
+                                  <a key={m.id} href={m.fileUrl} target="_blank" rel="noopener noreferrer"
+                                    style={{ 
+                                      width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', 
+                                      background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      textDecoration: 'none', border: '1px solid #e5e7eb'
+                                    }}>
+                                    {m.mediaType === 'PHOTO' ? (
+                                      <img src={m.thumbnailUrl || m.fileUrl} alt="" 
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                        onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.innerHTML = '🖼️'; }}
+                                      />
+                                    ) : (
+                                      <div style={{ 
+                                        width: '100%', height: '100%', 
+                                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white'
+                                      }}>
+                                        <span style={{ fontSize: '24px' }}>▶️</span>
+                                        <span style={{ fontSize: '10px' }}>视频</span>
+                                      </div>
+                                    )}
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                            
+                            {/* If media note but no media found, show fallback links */}
+                            {isMediaNote && relatedMedia.length === 0 && event.media?.length > 0 && (
+                              <div style={{ marginTop: '8px', fontSize: '12px', color: '#667eea' }}>
+                                📎 <a href="#media-section" style={{ color: '#667eea' }}>查看附件</a>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div style={{ color: '#999', fontSize: '14px' }}>暂无动态</div>

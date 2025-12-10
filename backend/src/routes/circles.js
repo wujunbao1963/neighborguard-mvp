@@ -8,6 +8,7 @@ const router = express.Router();
 const prisma = require('../config/database');
 const { AppError } = require('../middleware/errorHandler');
 const { authenticate, requireCircleMember, requireCircleOwner } = require('../middleware/auth');
+const { getZoneTypesForHouseType } = require('../config/constants');
 
 // ============================================================================
 // GET /api/circles - Get all circles for current user
@@ -200,13 +201,8 @@ router.post('/', authenticate, async (req, res, next) => {
         }
       });
 
-      // 4. Initialize zones based on house type
-      const zoneConfigs = await tx.zoneTypeConfig.findMany({
-        where: {
-          supportedHouseTypes: { has: houseType }
-        },
-        orderBy: { displayOrder: 'asc' }
-      });
+      // 4. Initialize zones based on house type (using code-based config)
+      const zoneConfigs = getZoneTypesForHouseType(houseType);
 
       for (const config of zoneConfigs) {
         await tx.zone.create({
@@ -300,30 +296,13 @@ router.post('/:circleId/members', authenticate, requireCircleOwner, async (req, 
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Check if email is whitelisted
-    const whitelist = await prisma.emailWhitelist.findUnique({
-      where: { email: normalizedEmail }
-    });
-
-    if (!whitelist || !whitelist.isActive) {
-      throw new AppError('该邮箱不在邀请名单中', 403, 'NOT_WHITELISTED');
-    }
-
-    // Find or create user
+    // Find user - must already be registered in the system
     let user = await prisma.user.findUnique({
       where: { email: normalizedEmail }
     });
 
     if (!user) {
-      const userDisplayName = whitelist.notes?.replace('Test user: ', '') || 
-                              normalizedEmail.split('@')[0];
-      user = await prisma.user.create({
-        data: {
-          email: normalizedEmail,
-          displayName: userDisplayName,
-          isActive: true
-        }
-      });
+      throw new AppError('该用户未注册，请让对方先登录系统完成注册', 404, 'USER_NOT_FOUND');
     }
 
     // Check if already a member

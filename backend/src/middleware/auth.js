@@ -48,6 +48,7 @@ const authenticate = async (req, res, next) => {
         displayName: true,
         avatarUrl: true,
         phone: true,
+        adminRole: true,
         isActive: true,
         deletedAt: true
       }

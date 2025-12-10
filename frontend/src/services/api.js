@@ -110,7 +110,8 @@ export const zoneAPI = {
   reorder: (circleId, zoneIds) => api.post(`/zones/${circleId}/reorder`, { zoneIds }),
   enableAll: (circleId) => api.post(`/zones/${circleId}/enable-all`),
   disableAll: (circleId) => api.post(`/zones/${circleId}/disable-all`),
-  resetDefaults: (circleId) => api.post(`/zones/${circleId}/reset-defaults`)
+  resetDefaults: (circleId) => api.post(`/zones/${circleId}/reset-defaults`),
+  init: (circleId) => api.post(`/zones/${circleId}/init`)
 };
 
 // ============================================================================
@@ -144,7 +145,13 @@ export const uploadAPI = {
   getAll: (circleId, eventId) => api.get(`/uploads/${circleId}/${eventId}`),
   delete: (circleId, mediaId) => api.delete(`/uploads/${circleId}/${mediaId}`),
   
-  // Download all media as zip
+  // Download media for ONE event as zip
+  downloadEvent: (circleId, eventId) => {
+    const token = localStorage.getItem('accessToken');
+    return `${API_BASE}/uploads/${circleId}/${eventId}/download?token=${token}`;
+  },
+  
+  // Download all media for circle as zip
   downloadAll: (circleId, startDate, endDate) => {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
@@ -154,6 +161,32 @@ export const uploadAPI = {
     const token = localStorage.getItem('accessToken');
     return `${API_BASE}/uploads/${circleId}/download-all?${params.toString()}&token=${token}`;
   }
+};
+
+// ============================================================================
+// Admin API
+// ============================================================================
+export const adminAPI = {
+  // Get current admin info
+  getMe: () => api.get('/auth/admin/me'),
+  
+  // User management
+  getUsers: () => api.get('/auth/admin/users'),
+  deleteUser: (userId) => api.delete(`/auth/admin/users/${userId}`),
+  makeHomeowner: (userId, data) => api.post('/auth/admin/make-homeowner', { userId, ...data }),
+  
+  // Whitelist management (optional now - anyone can register)
+  getWhitelist: () => api.get('/auth/admin/whitelist'),
+  addWhitelist: (email, notes) => api.post('/auth/admin/whitelist', { email, notes }),
+  removeWhitelist: (email) => api.delete(`/auth/admin/whitelist/${encodeURIComponent(email)}`),
+  
+  // Circle management
+  getCircles: () => api.get('/auth/admin/circles'),
+  
+  // Admin user management (super admin only)
+  getAdmins: () => api.get('/auth/admin/admins'),
+  addAdmin: (email) => api.post('/auth/admin/admins', { email }),
+  removeAdmin: (userId) => api.delete(`/auth/admin/admins/${userId}`)
 };
 
 export default api;

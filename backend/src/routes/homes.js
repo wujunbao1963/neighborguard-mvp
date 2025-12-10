@@ -8,6 +8,7 @@ const router = express.Router();
 const prisma = require('../config/database');
 const { AppError } = require('../middleware/errorHandler');
 const { authenticate, requireCircleMember, requireCanManageHome } = require('../middleware/auth');
+const { getZoneTypesForHouseType } = require('../config/constants');
 
 // ============================================================================
 // GET /api/homes/:circleId - Get home details
@@ -129,13 +130,8 @@ async function reinitializeZones(tx, circleId, newHouseType) {
     where: { circleId }
   });
 
-  // Get zone configs for new house type
-  const newZoneConfigs = await tx.zoneTypeConfig.findMany({
-    where: {
-      supportedHouseTypes: { has: newHouseType }
-    },
-    orderBy: { displayOrder: 'asc' }
-  });
+  // Get zone configs for new house type (from code-based config)
+  const newZoneConfigs = getZoneTypesForHouseType(newHouseType);
 
   const newZoneTypes = new Set(newZoneConfigs.map(c => c.value));
   const currentZoneMap = new Map(currentZones.map(z => [z.zoneType, z]));

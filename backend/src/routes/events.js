@@ -8,6 +8,7 @@ const router = express.Router();
 const prisma = require('../config/database');
 const { AppError } = require('../middleware/errorHandler');
 const { authenticate, requireCircleMember, requireCircleOwner } = require('../middleware/auth');
+const { EVENT_TYPES, getEventType } = require('../config/constants');
 
 // ============================================================================
 // GET /api/events/:circleId - Get events for a circle
@@ -277,10 +278,8 @@ router.post('/:circleId', authenticate, requireCircleMember(['OWNER', 'HOUSEHOLD
       throw new AppError('防区不存在或未启用', 400, 'INVALID_ZONE');
     }
 
-    // Get event type config for validation
-    const eventTypeConfig = await prisma.eventTypeConfig.findUnique({
-      where: { value: eventType }
-    });
+    // Get event type config for validation (from code-based config)
+    const eventTypeConfig = getEventType(eventType);
 
     if (!eventTypeConfig) {
       throw new AppError('无效的事件类型', 400, 'INVALID_EVENT_TYPE');

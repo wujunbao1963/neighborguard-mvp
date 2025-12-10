@@ -32,10 +32,23 @@ export function CircleProvider({ children }) {
       ]);
 
       setCurrentCircle(circleRes.data.circle);
-      setZones(zonesRes.data.zones);
       setHome(homeRes.data.home);
       setCurrentCircleId(circleId);
       localStorage.setItem('currentCircleId', circleId);
+
+      // Auto-init zones if empty (for circles created before zone init was added)
+      let loadedZones = zonesRes.data.zones;
+      if (loadedZones.length === 0) {
+        console.log('No zones found, initializing...');
+        try {
+          const initRes = await zoneAPI.init(circleId);
+          loadedZones = initRes.data.zones || [];
+          console.log(`Initialized ${loadedZones.length} zones`);
+        } catch (initErr) {
+          console.error('Failed to init zones:', initErr);
+        }
+      }
+      setZones(loadedZones);
     } catch (err) {
       console.error('Failed to load circle:', err);
       throw err;

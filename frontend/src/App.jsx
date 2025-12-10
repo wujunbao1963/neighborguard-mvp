@@ -5,6 +5,7 @@ import LoginPage from './components/LoginPage';
 import HomePage from './pages/HomePage';
 import TimelinePage from './pages/TimelinePage';
 import SettingsPage from './pages/SettingsPage';
+import AdminPage from './pages/AdminPage';
 import CreateEventModal from './components/CreateEventModal';
 import EventDetailModal from './components/EventDetailModal';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -16,6 +17,9 @@ function App() {
   const [currentView, setCurrentView] = useState('home');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  
+  // Check if user is admin
+  const isAdmin = user?.adminRole === 'SUPER_ADMIN' || user?.adminRole === 'ADMIN';
 
   // Handle logout
   const handleLogout = async () => {
@@ -140,7 +144,8 @@ function App() {
         {[
           { id: 'home', label: '守望首页', icon: '🏠' },
           { id: 'timeline', label: '时间线', icon: '📅' },
-          { id: 'settings', label: '设置', icon: '⚙️' }
+          { id: 'settings', label: '设置', icon: '⚙️' },
+          ...(isAdmin ? [{ id: 'admin', label: '管理', icon: '👑' }] : [])
         ].map(tab => (
           <button
             key={tab.id}
@@ -155,14 +160,19 @@ function App() {
 
       {/* Content */}
       <div className="content">
-        {circleLoading ? (
+        {currentView === 'admin' && isAdmin ? (
+          <AdminPage />
+        ) : circleLoading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
             <LoadingSpinner size="lg" />
           </div>
         ) : !currentCircle ? (
           <div className="empty-state">
             <div className="empty-state-icon">🏠</div>
-            <div>还没有加入任何圈子</div>
+            <div style={{ marginBottom: '8px' }}>还没有加入任何圈子</div>
+            <p style={{ fontSize: '14px', color: '#6b7280', maxWidth: '300px', textAlign: 'center' }}>
+              请等待屋主邀请您加入他们的圈子，或联系管理员将您设为屋主。
+            </p>
           </div>
         ) : (
           <>
