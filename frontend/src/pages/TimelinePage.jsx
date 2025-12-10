@@ -50,18 +50,6 @@ export default function TimelinePage({ onViewEvent }) {
     return zone?.displayName || '未知区域';
   };
 
-  // Download all media
-  const handleDownloadAll = () => {
-    if (!currentCircleId) {
-      alert('请先选择一个圈子');
-      return;
-    }
-    
-    // Get the download URL and open it
-    const downloadUrl = uploadAPI.downloadAll(currentCircleId);
-    window.open(downloadUrl, '_blank');
-  };
-
   // Filter events
   const filteredEvents = events.filter(event => {
     // Filter by severity
@@ -99,9 +87,6 @@ export default function TimelinePage({ onViewEvent }) {
     return new Date(b.createdAt) - new Date(a.createdAt);
   });
 
-  // Count total media
-  const totalMedia = events.reduce((sum, e) => sum + (e.mediaCount || 0), 0);
-
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
@@ -122,17 +107,6 @@ export default function TimelinePage({ onViewEvent }) {
               </span>
             )}
           </h2>
-          
-          {/* Download All Button */}
-          {totalMedia > 0 && (
-            <button 
-              className="btn btn-secondary"
-              onClick={handleDownloadAll}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', fontSize: '14px' }}
-            >
-              📦 下载所有附件 ({totalMedia})
-            </button>
-          )}
         </div>
         
         {/* Search Box */}
