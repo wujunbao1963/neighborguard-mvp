@@ -19,7 +19,7 @@ const ROLE_OPTIONS = [
 ];
 
 export default function SettingsPage() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, refreshCircles } = useAuth();
   const { currentCircle, home, zones, canEdit, isOwner, refreshHome, refreshZones, refreshCircle } = useCircle();
   
   const [activeTab, setActiveTab] = useState('profile');
@@ -72,6 +72,8 @@ export default function SettingsPage() {
     try {
       await homeAPI.update(currentCircle.id, homeForm);
       await refreshHome();
+      await refreshCircle(); // Refresh current circle details
+      await refreshCircles(); // Refresh circles list (for dropdown)
       setEditingHome(false);
     } catch (err) {
       alert(err.response?.data?.error?.message || '保存失败');
