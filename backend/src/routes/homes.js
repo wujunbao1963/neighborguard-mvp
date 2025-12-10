@@ -67,7 +67,7 @@ router.put('/:circleId', authenticate, requireCanManageHome, async (req, res, ne
     // Check if house type is changing
     const houseTypeChanging = houseType && houseType !== currentHome.houseType;
 
-    // Build update data
+    // Build update data for Home
     const updateData = {};
     if (displayName !== undefined) updateData.displayName = displayName;
     if (country !== undefined) updateData.country = country;
@@ -94,6 +94,14 @@ router.put('/:circleId', authenticate, requireCanManageHome, async (req, res, ne
           data: updateData
         });
 
+        // Also update Circle displayName if home displayName changed
+        if (displayName !== undefined) {
+          await tx.circle.update({
+            where: { id: circleId },
+            data: { displayName }
+          });
+        }
+
         // Reinitialize zones
         const zoneResult = await reinitializeZones(tx, circleId, houseType);
         
@@ -101,13 +109,23 @@ router.put('/:circleId', authenticate, requireCanManageHome, async (req, res, ne
       });
       zonesUpdated = true;
     } else {
-      // Just update home
-      result = {
-        home: await prisma.home.update({
+      // Just update home and circle
+      result = await prisma.$transaction(async (tx) => {
+        const home = await tx.home.update({
           where: { circleId },
           data: updateData
-        })
-      };
+        });
+
+        // Also update Circle displayName if home displayName changed
+        if (displayName !== undefined) {
+          await tx.circle.update({
+            where: { id: circleId },
+            data: { displayName }
+          });
+        }
+
+        return { home };
+      });
     }
 
     res.json({
