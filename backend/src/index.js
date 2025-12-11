@@ -15,6 +15,7 @@ const homeRoutes = require('./routes/homes');
 const zoneRoutes = require('./routes/zones');
 const eventRoutes = require('./routes/events');
 const uploadRoutes = require('./routes/uploads');
+const deviceRoutes = require('./routes/devices');
 
 // Middleware
 const { errorHandler } = require('./middleware/errorHandler');
@@ -81,6 +82,7 @@ app.use('/api/homes', homeRoutes);
 app.use('/api/zones', zoneRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/devices', deviceRoutes);
 
 // ============================================================================
 // 404 Handler

@@ -9,6 +9,7 @@ const prisma = require('../config/database');
 const { AppError } = require('../middleware/errorHandler');
 const { authenticate, requireCircleMember, requireCircleOwner } = require('../middleware/auth');
 const { EVENT_TYPES, getEventType } = require('../config/constants');
+const notificationService = require('../services/notificationService');
 
 // ============================================================================
 // GET /api/events/:circleId - Get events for a circle
@@ -353,6 +354,17 @@ router.post('/:circleId', authenticate, requireCircleMember(['OWNER', 'HOUSEHOLD
       },
       message: '事件创建成功'
     });
+
+    // Send push notifications (async, don't wait)
+    prisma.circle.findUnique({
+      where: { id: circleId },
+      select: { displayName: true }
+    }).then(circle => {
+      if (circle) {
+        notificationService.notifyNewEvent(event, circle, req.user.id);
+      }
+    }).catch(err => console.error('Notification error:', err));
+
   } catch (error) {
     next(error);
   }
@@ -483,6 +495,20 @@ router.put('/:circleId/:eventId/status', authenticate, requireCircleMember(['OWN
       status,
       message: '状态已更新'
     });
+
+    // Send notification for resolved/false alarm
+    if (['RESOLVED_OK', 'FALSE_ALARM'].includes(status)) {
+      prisma.circle.findUnique({
+        where: { id: circleId },
+        select: { displayName: true }
+      }).then(circle => {
+        if (circle) {
+          const updateType = status === 'RESOLVED_OK' ? 'resolved' : 'false_alarm';
+          notificationService.notifyEventUpdate(event, circle, updateType, req.user.id);
+        }
+      }).catch(err => console.error('Notification error:', err));
+    }
+
   } catch (error) {
     next(error);
   }

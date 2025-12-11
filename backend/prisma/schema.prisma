@@ -37,6 +37,7 @@ model User {
   circleMemberships CircleMember[]
   authCodes         AuthCode[]
   refreshTokens     RefreshToken[]
+  deviceTokens      DeviceToken[]
   
   @@map("users")
 }
@@ -396,4 +397,32 @@ model EventTypeConfig {
   displayOrder  Int           @default(0) @map("display_order")
   
   @@map("event_type_configs")
+}
+
+// ============================================================================
+// 14. DEVICE TOKENS (Push notification tokens)
+// ============================================================================
+model DeviceToken {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  token       String   @unique
+  platform    Platform @default(IOS)
+  deviceName  String?  @map("device_name")
+  appVersion  String?  @map("app_version")
+  
+  isActive    Boolean  @default(true) @map("is_active")
+  lastUsedAt  DateTime @default(now()) @map("last_used_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  @@index([userId])
+  @@index([token])
+  @@map("device_tokens")
+}
+
+enum Platform {
+  IOS
+  ANDROID
 }
