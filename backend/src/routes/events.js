@@ -356,12 +356,20 @@ router.post('/:circleId', authenticate, requireCircleMember(['OWNER', 'HOUSEHOLD
     });
 
     // Send push notifications (async, don't wait)
+    console.log(`\n🔔 Triggering notifications for new event: ${event.id}`);
+    console.log(`   Title: ${event.title}`);
+    console.log(`   Severity: ${event.severity}`);
+    console.log(`   Creator userId: ${req.user.id}`);
+    
     prisma.circle.findUnique({
       where: { id: circleId },
       select: { displayName: true }
     }).then(circle => {
       if (circle) {
+        console.log(`   Circle: ${circle.displayName}`);
         notificationService.notifyNewEvent(event, circle, req.user.id);
+      } else {
+        console.log(`   ❌ Circle not found for notification`);
       }
     }).catch(err => console.error('Notification error:', err));
 

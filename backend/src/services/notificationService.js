@@ -11,6 +11,12 @@ class NotificationService {
   async notifyCircleMembers(circleId, payload, options = {}) {
     const { excludeUserId, severityFilter } = options;
     
+    console.log(`\n📤 notifyCircleMembers called:`);
+    console.log(`   circleId: ${circleId}`);
+    console.log(`   excludeUserId: ${excludeUserId}`);
+    console.log(`   severityFilter: ${severityFilter}`);
+    console.log(`   APNs configured: ${apnsService.isConfigured()}`);
+    
     if (!apnsService.isConfigured()) {
       console.log('⏭️ APNs not configured, skipping notifications');
       return { sent: 0, failed: 0 };
@@ -24,9 +30,11 @@ class NotificationService {
       });
       
       if (!circle) {
-        console.error(`Circle not found: ${circleId}`);
+        console.error(`❌ Circle not found: ${circleId}`);
         return { sent: 0, failed: 0 };
       }
+      
+      console.log(`   Circle name: ${circle.displayName}`);
       
       // Build query for members who should receive notifications
       const memberWhere = {
@@ -51,6 +59,7 @@ class NotificationService {
           user: {
             select: {
               id: true,
+              displayName: true,
               deviceTokens: {
                 where: { isActive: true },
                 select: { token: true, id: true }
@@ -60,27 +69,38 @@ class NotificationService {
         }
       });
       
+      console.log(`   Found ${members.length} members matching criteria`);
+      
       let sent = 0;
       let failed = 0;
+      let skipped = 0;
       
       for (const member of members) {
         // Skip excluded user (usually the event creator)
         if (excludeUserId && member.userId === excludeUserId) {
+          console.log(`   ⏭️ Skipping ${member.user.displayName} (event creator)`);
+          skipped++;
           continue;
         }
         
+        const tokenCount = member.user.deviceTokens.length;
+        console.log(`   👤 ${member.user.displayName}: ${tokenCount} device(s)`);
+        
         // Send to all active devices of this member
         for (const device of member.user.deviceTokens) {
+          console.log(`      📱 Sending to token: ${device.token.substring(0, 20)}...`);
           const result = await apnsService.sendNotification(device.token, payload);
           
           if (result.success) {
             sent++;
+            console.log(`      ✅ Sent successfully`);
           } else {
             failed++;
+            console.log(`      ❌ Failed: ${result.error}`);
             
             // Remove invalid tokens
             if (result.shouldRemoveToken) {
-              console.log(`🗑️ Removing invalid token: ${device.token.substring(0, 16)}...`);
+              console.log(`      🗑️ Removing invalid token`);
               await prisma.deviceToken.delete({
                 where: { id: device.id }
               }).catch(() => {});
@@ -89,10 +109,8 @@ class NotificationService {
         }
       }
       
-      if (sent > 0 || failed > 0) {
-        console.log(`📤 Notifications: ${sent} sent, ${failed} failed`);
-      }
-      return { sent, failed };
+      console.log(`📊 Notification Summary: ${sent} sent, ${failed} failed, ${skipped} skipped\n`);
+      return { sent, failed, skipped };
       
     } catch (error) {
       console.error('❌ Error sending notifications:', error);

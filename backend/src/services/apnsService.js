@@ -9,6 +9,8 @@ const path = require('path');
 
 class APNsService {
   constructor() {
+    console.log('🔔 Initializing APNs Service...');
+    
     this.keyId = process.env.APNS_KEY_ID;
     this.teamId = process.env.APNS_TEAM_ID;
     this.bundleId = process.env.APNS_BUNDLE_ID || 'com.neighborguard.app';
@@ -23,6 +25,14 @@ class APNsService {
     this.jwtToken = null;
     this.jwtGeneratedAt = null;
     
+    // Log configuration status
+    console.log(`   APNS_KEY_ID: ${this.keyId ? '✅ Set' : '❌ Missing'}`);
+    console.log(`   APNS_TEAM_ID: ${this.teamId ? '✅ Set' : '❌ Missing'}`);
+    console.log(`   APNS_BUNDLE_ID: ${this.bundleId}`);
+    console.log(`   APNS_KEY_FILE: ${this.keyFile || '(not set)'}`);
+    console.log(`   APNS_KEY_BASE64: ${process.env.APNS_KEY_BASE64 ? '✅ Set' : '❌ Missing'}`);
+    console.log(`   APNS_PRODUCTION: ${this.isProduction} → ${this.host}`);
+    
     this.loadPrivateKey();
   }
   
@@ -32,6 +42,7 @@ class APNsService {
       try {
         this.privateKey = Buffer.from(process.env.APNS_KEY_BASE64, 'base64').toString('utf8');
         console.log('✅ APNs private key loaded from APNS_KEY_BASE64');
+        console.log(`   Key starts with: ${this.privateKey.substring(0, 30)}...`);
         return;
       } catch (error) {
         console.error('❌ Failed to decode APNS_KEY_BASE64:', error.message);
@@ -42,22 +53,26 @@ class APNsService {
     if (this.keyFile) {
       try {
         const keyPath = path.resolve(this.keyFile);
+        console.log(`   Trying to load key from: ${keyPath}`);
         if (fs.existsSync(keyPath)) {
           this.privateKey = fs.readFileSync(keyPath, 'utf8');
           console.log('✅ APNs private key loaded from file:', keyPath);
           return;
+        } else {
+          console.log(`   File not found: ${keyPath}`);
         }
       } catch (error) {
         console.error('❌ Failed to load APNs key file:', error.message);
       }
     }
     
-    console.warn('⚠️ APNs not configured - push notifications disabled');
+    console.warn('⚠️ APNs NOT configured - push notifications DISABLED');
     console.warn('   Set APNS_KEY_BASE64 or APNS_KEY_FILE environment variable');
   }
   
   isConfigured() {
-    return !!(this.privateKey && this.keyId && this.teamId);
+    const configured = !!(this.privateKey && this.keyId && this.teamId);
+    return configured;
   }
   
   generateJWT() {

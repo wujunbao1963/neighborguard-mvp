@@ -15,7 +15,15 @@ router.post('/register', authenticate, async (req, res, next) => {
     const userId = req.user.id;
     const { token, platform = 'IOS', deviceName, appVersion } = req.body;
     
+    console.log(`\n📱 Device Registration Request:`);
+    console.log(`   userId: ${userId}`);
+    console.log(`   token: ${token ? token.substring(0, 20) + '...' : 'MISSING'}`);
+    console.log(`   platform: ${platform}`);
+    console.log(`   deviceName: ${deviceName}`);
+    console.log(`   appVersion: ${appVersion}`);
+    
     if (!token) {
+      console.log(`   ❌ Token missing, rejecting`);
       return res.status(400).json({
         success: false,
         error: { code: 'MISSING_TOKEN', message: 'Device token is required' }
@@ -43,7 +51,13 @@ router.post('/register', authenticate, async (req, res, next) => {
       }
     });
     
-    console.log(`✅ Device registered for user ${userId}: ${token.substring(0, 16)}...`);
+    console.log(`   ✅ Device registered: ${deviceToken.id}`);
+    
+    // Count total tokens for this user
+    const tokenCount = await prisma.deviceToken.count({
+      where: { userId, isActive: true }
+    });
+    console.log(`   Total active tokens for user: ${tokenCount}\n`);
     
     res.json({
       success: true,
@@ -51,6 +65,7 @@ router.post('/register', authenticate, async (req, res, next) => {
       deviceId: deviceToken.id
     });
   } catch (error) {
+    console.error(`   ❌ Registration error:`, error.message);
     next(error);
   }
 });
